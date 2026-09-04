@@ -260,18 +260,15 @@
 
     var renameBtn = makeIconButton('Umbenennen', ICONS.rename);
     renameBtn.dataset.action = 'rename';
-    renameBtn.dataset.habitId = habit.id;
     renameBtn.addEventListener('click', function () {
       startRename(nameEl, habit, state);
     });
 
     var archiveBtn = makeIconButton(habit.archived ? 'Wiederherstellen' : 'Archivieren', ICONS.archive);
     archiveBtn.dataset.action = 'archive';
-    archiveBtn.dataset.habitId = habit.id;
 
     var deleteBtn = makeIconButton('Löschen', ICONS.delete);
     deleteBtn.dataset.action = 'delete';
-    deleteBtn.dataset.habitId = habit.id;
     deleteBtn.addEventListener('click', function () {
       confirmDelete(habit.name, function () {
         global.habits.deleteHabit(state, habit.id);
