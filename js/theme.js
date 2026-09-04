@@ -7,8 +7,7 @@
 
   function apply(state) {
     currentState = state || { darkMode: false };
-    var root = document.documentElement;
-    root.setAttribute('data-theme', currentState.darkMode ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', currentState.darkMode ? 'dark' : 'light');
     if (toggle === null) {
       toggle = document.getElementById('theme-toggle');
     }
@@ -23,7 +22,9 @@
 
   function onToggle() {
     if (currentState === null) {
-      return;
+      currentState = (typeof store !== 'undefined' && typeof store.loadState === 'function')
+        ? store.loadState()
+        : { habits: [], darkMode: false };
     }
     currentState.darkMode = !currentState.darkMode;
     store.saveState(currentState);
@@ -43,7 +44,11 @@
     wired = true;
   }
 
-  document.addEventListener('DOMContentLoaded', wire);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
 
   global.theme = {
     apply: apply,
