@@ -1,39 +1,33 @@
 VERDICT: BUGS_FOUND
 
-**Titel**: Nach dem Anlegen einer Gewohnheit werden vier `[data-habit-id]`-Elemente gerendert statt genau einer
+Der Browser-Smoke läuft sauber: Die App lädt, zeigt den Leerzustand und stürzt nicht ab. Der `npm install`-Schritt schlägt zwar mit `ENOENT package.json` fehl, ist hier aber Harness-/Stack-Rauschen: Das Produkt ist als rein statische Web-App ohne Build-Schritt spezifiziert und besitzt bewusst keine `package.json`. Er ist kein Produktbug.
 
-**Symptom**:  
-Die zentralen E2E-Akzeptanztests schlagen bereits beim Anlegen der ersten Gewohnheit fehl: Der Locator `[data-habit-id]` findet nach „Hinzufügen“ vier Elemente statt eines. Dadurch lassen sich AC-01, AC-02, AC-03, AC-04, AC-05, AC-06 und AC-07 nicht verifizieren — die Kernfunktionen erscheinen aus Tester-Sicht als kaputt, obwohl nur eine Gewohnheit angelegt wurde.
+Die eigentlichen End-to-End-Tests decken jedoch echte Laufzeitfehler auf: 4 von 24 Tests scheitern. Dabei zeigen zwei strukturell ähnliche Fehler redundante DOM-Container, und der Archiv-Test verfehlt AC-07.
 
-**Repro**:  
-`npx playwright test` ausführen, z. B. `e2e/habits.spec.cjs:20:1`: Name eingeben, auf „Hinzufügen“ klicken, dann `await expect(page.locator('[data-habit-id]')).toHaveCount(1);`.
+**Bug 1: Doppelte statische Status-/Chart-Container nach dem Anlegen einer Gewohnheit**
 
-**Evidence**:
-```text
-Error: expect(locator).toHaveCount(expected) failed
+- **Symptom:** Nach dem Anlegen einer Gewohnheit existieren `.habit-stats` und `canvas.habit-chart` doppelt: ein leerer statischer Platzhalter aus `index.html` und die dynamisch gerenderte Karte. Dadurch schlagen AC-04, AC-05 und AC-06 fehl; zusätzlich bleiben leere Restcontainer sichtbar im DOM, was den aufgeräumten Zustand untergräbt.
+- **Repro:** `e2e/grid.spec.cjs` (AC-04, AC-05) und `e2e/chart.spec.cjs` (AC-06) ausführen, jeweils eine Gewohnheit anlegen.
+- **Evidence:**
+  - `Error: expect(locator).toHaveCount(expected) failed`
+  - `Locator:  locator('canvas.habit-chart')`
+  - `Expected: 1`
+  - `Received: 2`
+  - `Error: strict mode violation: locator('.habit-stats') resolved to 2 elements:`
+  - `1) <div class="habit-stats">…</div> aka getByText('Aktuelle Serie0 TageLängste')`
+  - `2) <div class="habit-stats"></div> aka locator('#habit-list > div:nth-child(4)')`
+- **Severity:** high
+- **Suspected file(s):** `index.html` enthält die statischen Platzhalter `<div class="habit-stats"></div>` und `<canvas class="habit-chart"></canvas>`; `js/ui.js` baut die dynamischen Karten-Container daneben auf, ohne die statischen Platzhalter zu entfernen. Die Fehler teilen dieselbe Ursache, nicht die Render-Code-Dateien selbst.
 
-Locator:  locator('[data-habit-id]')
-Expected: 1
-Received: 4
-Timeout:  6000ms
+**Bug 2: Archivansicht/AC-07 scheitert im End-to-End-Test**
 
-16 × locator resolved to 4 elements
-  - unexpected value "4"
-```
-Der identische Fehler tritt in den fehlgeschlagenen Tests auf:
-```text
-8 failed
-  e2e/archive.spec.cjs:27:1 › AC-07: an archived habit leaves the active view and appears in the archive view
-  e2e/archive.spec.cjs:46:1 › AC-07: restoring an archived habit returns it to the active view
-  e2e/chart.spec.cjs:20:1 › AC-06: each habit renders a canvas bar chart with real dimensions
-  e2e/grid.spec.cjs:27:1 › AC-03: clicking a grid cell toggles the check and persists after reload
-  e2e/grid.spec.cjs:43:1 › AC-04: current and longest streak update immediately after a check
-  e2e/grid.spec.cjs:54:1 › AC-05: weekly rate is shown as a percentage
-  e2e/habits.spec.cjs:20:1 › AC-01: a newly created habit appears in the 30-day grid and survives reload
-  e2e/habits.spec.cjs:46:1 › AC-02: duplicate names are rejected with a message
-```
+- **Symptom:** Die Archivfunktion besteht den vorgesehenen Akzeptanztest nicht. Eine archivierte Gewohnheit verlässt entweder die aktive Ansicht nicht, erscheint nicht in der Archivansicht oder kehrt nach dem Wiederherstellen nicht korrekt zurück.
+- **Repro:** `e2e/archive.spec.cjs:27` ausführen.
+- **Evidence:**
+  - `e2e\archive.spec.cjs:27:1 › AC-07: an archived habit leaves the active view and appears in the archive view`
+  - Fehlerkontext unter `test-results\archive-AC-07-an-archived--bf18c-appears-in-the-archive-view\error-context.md`
+  - Gesamtergebnis: `4 failed`, darunter `e2e\archive.spec.cjs:27:1 …`
+- **Severity:** high
+- **Suspected file(s):** nicht lokalisiert — der konkrete Assertionsfehler ist im Protokoll abgeschnitten. Kandidaten sind die Archivlogik in `js/archive.js` bzw. deren Zusammenspiel mit dem Filter-Button; der Fehlerkontext enthält einen Screenshot zur genaueren Bestimmung.
 
-**Suspected file(s)**:  
-Nicht eindeutig auf eine Datei lokalisierbar — alle acht Fehler teilen dieselbe Form und betreffen die Anzahl der `[data-habit-id]`-Treffer. Die gemeinsame Ursache liegt daher vermutlich in der zentralen HabitCard-Erzeugung/Attributvergabe (`js/ui.js`) oder in deren Zusammenspiel mit `js/grid.js`/`js/chart.js`, nicht in den einzelnen Spec-Dateien.
-
-**Severity**: high
+Damit sind die Akzeptanzkriterien AC-04, AC-05, AC-06 und AC-07 zur Laufzeit verletzt.
