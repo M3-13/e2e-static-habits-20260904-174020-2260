@@ -37,7 +37,7 @@
     toggleWired = true;
     toggle.addEventListener('click', function () {
       showArchived = !showArchived;
-      applyFilter(currentState);
+      global.document.dispatchEvent(new global.CustomEvent('habits-changed'));
     });
   }
 
@@ -49,13 +49,24 @@
       var card = cards[i];
       var id = card.getAttribute('data-habit-id');
       var isArchived = card.getAttribute('data-archived') === 'true';
-      card.style.display = (showArchived ? isArchived : !isArchived) ? '' : 'none';
+      var matches = showArchived ? isArchived : !isArchived;
+
+      if (!matches) {
+        card.remove();
+        continue;
+      }
 
       var archiveBtn = card.querySelector('[data-action="archive"]');
       if (archiveBtn && !archiveBtn._archiveWired) {
         archiveBtn._archiveWired = true;
         wireArchiveButton(archiveBtn, id);
       }
+    }
+
+    var emptyState = global.document.getElementById('empty-state');
+    if (emptyState) {
+      var remaining = global.document.querySelectorAll('.habit-card').length;
+      emptyState.style.display = remaining > 0 ? 'none' : '';
     }
 
     wireToggle();
