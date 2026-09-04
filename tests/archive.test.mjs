@@ -107,6 +107,7 @@ function makeCard(id, archived) {
   const archiveBtn = makeButton();
   return {
     style: {},
+    removed: false,
     archiveBtn,
     getAttribute(name) {
       if (name === 'data-habit-id') return id;
@@ -115,6 +116,9 @@ function makeCard(id, archived) {
     },
     querySelector(sel) {
       return sel === '[data-action="archive"]' ? archiveBtn : null;
+    },
+    remove() {
+      this.removed = true;
     }
   };
 }
@@ -137,20 +141,24 @@ function makeToggle() {
 }
 
 function installArchiveDom(cards, toggle) {
+  const emptyState = { style: {} };
   globalThis.document = {
     dispatchEvent: (e) => {
       firedEvents.push(e.type);
     },
     getElementById(id) {
-      return id === 'filter-toggle' ? toggle : null;
+      if (id === 'filter-toggle') return toggle;
+      if (id === 'empty-state') return emptyState;
+      return null;
     },
     querySelectorAll(sel) {
-      return sel === '.habit-card' ? cards : [];
+      return sel === '.habit-card' ? cards.filter((c) => !c.removed) : [];
     }
   };
+  return { emptyState };
 }
 
-test('applyFilter blendet archivierte Karten in der aktiven Ansicht aus', () => {
+test('applyFilter entfernt archivierte Karten in der aktiven Ansicht aus dem DOM', () => {
   resetMocks();
   load('archive.js'); // fresh module state (showArchived = false)
   const state = {
@@ -162,15 +170,32 @@ test('applyFilter blendet archivierte Karten in der aktiven Ansicht aus', () => 
   };
   const archivedCard = makeCard('a', true);
   const activeCard = makeCard('b', false);
-  installArchiveDom([archivedCard, activeCard], makeToggle());
+  const { emptyState } = installArchiveDom([archivedCard, activeCard], makeToggle());
 
   globalThis.archive.applyFilter(state);
 
-  assert.equal(archivedCard.style.display, 'none');
-  assert.equal(activeCard.style.display, '');
+  assert.equal(archivedCard.removed, true, 'archived card must be removed from the DOM');
+  assert.equal(activeCard.removed, false, 'active card must stay in the DOM');
+  assert.equal(emptyState.style.display, 'none', 'empty state stays hidden while cards remain');
 });
 
-test('applyFilter zeigt archivierte Karten nach Umschalten des Filters', () => {
+test('applyFilter zeigt den Leerzustand, wenn keine Karte im DOM bleibt', () => {
+  resetMocks();
+  load('archive.js');
+  const state = {
+    habits: [{ id: 'a', name: 'Lesen', checks: Array(30).fill(false), archived: true }],
+    darkMode: false
+  };
+  const archivedCard = makeCard('a', true);
+  const { emptyState } = installArchiveDom([archivedCard], makeToggle());
+
+  globalThis.archive.applyFilter(state);
+
+  assert.equal(archivedCard.removed, true);
+  assert.equal(emptyState.style.display, '', 'empty state must become visible when no card remains');
+});
+
+test('applyFilter zeigt archivierte Karten in der Archivansicht und entfernt die aktiven', () => {
   resetMocks();
   load('archive.js');
   const state = {
@@ -182,15 +207,26 @@ test('applyFilter zeigt archivierte Karten nach Umschalten des Filters', () => {
   };
   const archivedCard = makeCard('a', true);
   const activeCard = makeCard('b', false);
+  const cards = [archivedCard, activeCard];
   const toggle = makeToggle();
-  installArchiveDom([archivedCard, activeCard], toggle);
+  const { emptyState } = installArchiveDom(cards, toggle);
 
-  globalThis.archive.applyFilter(state);
-  toggle.click(); // switch to archive view -> applyFilter re-runs
+  globalThis.archive.applyFilter(state); // active view first
+  assert.equal(archivedCard.removed, true);
+  assert.equal(activeCard.removed, false);
 
-  assert.equal(archivedCard.style.display, '');
-  assert.equal(activeCard.style.display, 'none');
+  toggle.click(); // switch to archive view -> dispatches habits-changed
+  assert.ok(firedEvents.includes('habits-changed'), 'toggle must dispatch habits-changed for re-render');
+
+  cards.forEach((c) => {
+    c.removed = false; // simulate renderHabits rebuilding every card for the new view
+  });
+  globalThis.archive.applyFilter(state); // re-run for the archive view
+
+  assert.equal(archivedCard.removed, false, 'archived card must be shown in the archive view');
+  assert.equal(activeCard.removed, true, 'active card must be removed in the archive view');
   assert.equal(toggle.attrs['aria-pressed'], 'true');
+  assert.equal(emptyState.style.display, 'none');
 });
 
 test('Klick auf den Archivieren-Button verdrahtet toggleArchived', () => {
