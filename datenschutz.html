@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datenschutz – Habit-Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title">Datenschutz</h1>
+  </header>
+
+  <main class="app-main">
+    <div class="card">
+      <h2 style="font-size:16px;font-weight:var(--heading-weight);color:var(--text);margin:0 0 var(--space-2);">Deine Daten bleiben bei dir</h2>
+      <p style="margin:0 0 var(--space-2);color:var(--text);">
+        Der Habit-Tracker speichert alle eingegebenen Daten ausschließlich lokal in deinem Browser.
+        Es gibt keinen Server und keine Datenübertragung ins Internet.
+      </p>
+      <p style="margin:0;color:var(--text);">
+        Konkret bedeutet das: Deine Gewohnheiten, alle gesetzten Häkchen und deine Einstellungen
+        (zum Beispiel der Dark Mode) werden nur im sogenannten <strong>LocalStorage</strong> deines
+        Browsers abgelegt – unter dem Schlüssel <code>habit-tracker-state</code>.
+      </p>
+    </div>
+
+    <div class="card" style="margin-top:var(--space-3);">
+      <h2 style="font-size:16px;font-weight:var(--heading-weight);color:var(--text);margin:0 0 var(--space-2);">Was heißt das genau?</h2>
+      <ul style="margin:0;padding-left:var(--space-4);color:var(--text);">
+        <li>Es werden <strong>keine Daten an einen Server übertragen</strong> – weder anonym noch persönlich.</li>
+        <li>Es gibt <strong>keine Cookies</strong>, kein Tracking und keine Analyse-Dienste.</li>
+        <li>Deine Daten verlassen deinen Browser nicht und sind nur auf diesem Gerät sichtbar.</li>
+        <li>Wenn du den Browserverlauf oder die Website-Daten löschst, werden auch deine Gewohnheiten gelöscht.</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:var(--space-4);color:var(--muted);">
+      <a href="index.html">← Zurück zum Habit-Tracker</a>
+    </p>
+  </main>
+
+  <footer class="app-footer">
+    <a href="datenschutz.html">Datenschutz</a>
+    <a href="impressum.html">Impressum</a>
+  </footer>
+</body>
+</html>
