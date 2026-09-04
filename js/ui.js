@@ -283,7 +283,20 @@
     actions.appendChild(deleteBtn);
     header.appendChild(nameEl);
     header.appendChild(actions);
+
+    var gridEl = document.createElement('div');
+    gridEl.className = 'habit-grid';
+
+    var statsEl = document.createElement('div');
+    statsEl.className = 'habit-stats';
+
+    var chartEl = document.createElement('canvas');
+    chartEl.className = 'habit-chart';
+
     card.appendChild(header);
+    card.appendChild(gridEl);
+    card.appendChild(statsEl);
+    card.appendChild(chartEl);
     return card;
   }
 
